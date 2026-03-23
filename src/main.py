@@ -1,42 +1,25 @@
-import os
-from typing import List, Dict
-from pathlib import Path
-import git
-import yaml
-from transformers import Pipeline
-from .analyzers import SecurityAnalyzer, ArchitectureAnalyzer, PerformanceAnalyzer
+import numpy as np
+from transformers import pipeline
 
 class DiffSentinel:
-    def __init__(self, config_path: str = 'diffsentinel.yml'):
-        self.config = self._load_config(config_path)
-        self.repo = git.Repo(os.getcwd())
-        self.analyzers = self._initialize_analyzers()
+    def __init__(self):
+        self.sentiment_analyzer = pipeline('sentiment-analysis')
 
-    def _load_config(self, config_path: str) -> Dict:
-        with open(config_path, 'r') as f:
-            return yaml.safe_load(f)
-
-    def _initialize_analyzers(self) -> List:
-        analyzers = []
-        if self.config['analyze'].get('security'):
-            analyzers.append(SecurityAnalyzer())
-        if self.config['analyze'].get('architecture'):
-            analyzers.append(ArchitectureAnalyzer())
-        if self.config['analyze'].get('performance'):
-            analyzers.append(PerformanceAnalyzer())
-        return analyzers
-
-    def analyze_diff(self, commit_range: str) -> Dict:
-        diff = self.repo.git.diff(commit_range)
-        results = {}
-        for analyzer in self.analyzers:
-            results[analyzer.name] = analyzer.analyze(diff)
-        return results
-
-def main():
-    sentinel = DiffSentinel()
-    results = sentinel.analyze_diff('HEAD~1')
-    print(results)
-
-if __name__ == '__main__':
-    main()
+    def analyze_sentiment_diff(self, text1, text2):
+        """
+        Performs differential sentiment analysis between two input texts.
+        
+        Args:
+            text1 (str): The first text to analyze.
+            text2 (str): The second text to analyze.
+        
+        Returns:
+            dict: A dictionary containing the sentiment difference, with keys 'score_diff' and 'label_diff'.
+        """
+        sentiment1 = self.sentiment_analyzer(text1)[0]
+        sentiment2 = self.sentiment_analyzer(text2)[0]
+        
+        score_diff = sentiment2['score'] - sentiment1['score']
+        label_diff = sentiment2['label'] - sentiment1['label']
+        
+        return {'score_diff': score_diff, 'label_diff': label_diff}

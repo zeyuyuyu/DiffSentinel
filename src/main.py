@@ -1,33 +1,29 @@
 import numpy as np
-from transformers import pipeline
+from sklearn.ensemble import IsolationForest
 
-class DiffSentimentAnalyzer:
-    def __init__(self):
-        self.sentiment_analyzer = pipeline('sentiment-analysis')
+class AnomalyDetector:
+    def __init__(self, contamination=0.01):
+        self.model = IsolationForest(contamination=contamination)
 
-    def analyze_sentiment_diff(self, text1, text2):
-        """
-        Performs differential sentiment analysis on two input texts.
-        
-        Args:
-            text1 (str): The first input text.
-            text2 (str): The second input text.
-        
-        Returns:
-            dict: A dictionary containing the sentiment difference, with keys 'score_diff' and 'label_diff'.
-        """
-        sentiment1 = self.sentiment_analyzer(text1)[0]
-        sentiment2 = self.sentiment_analyzer(text2)[0]
-        
-        score_diff = sentiment2['score'] - sentiment1['score']
-        label_diff = sentiment2['label'] - sentiment1['label']
-        
-        return {'score_diff': score_diff, 'label_diff': label_diff}
+    def fit(self, X):
+        self.model.fit(X)
+
+    def detect(self, X):
+        scores = self.model.decision_function(X)
+        anomalies = scores < 0
+        return anomalies
+
+def main():
+    # Load data
+    data = np.loadtxt('data.csv', delimiter=',')
+
+    # Initialize and train anomaly detector
+    detector = AnomalyDetector()
+    detector.fit(data)
+
+    # Detect anomalies
+    anomalies = detector.detect(data)
+    print(f'Detected {np.sum(anomalies)} anomalies.')
 
 if __name__ == '__main__':
-    analyzer = DiffSentimentAnalyzer()
-    text1 = "This movie was amazing!"
-    text2 = "This movie was disappointing."
-    
-    result = analyzer.analyze_sentiment_diff(text1, text2)
-    print(result)
+    main()
